@@ -8,7 +8,7 @@ Projeto desenvolvido para a Pos-Tech FIAP - Data Analytics.
 
 Construir um modelo preditivo para estimar se o fechamento do IBOVESPA no proximo pregao sera maior ou menor que o fechamento do pregao atual.
 
-O problema sera tratado como uma classificacao binaria:
+O problema foi tratado como classificacao binaria:
 
 - `1`: fechamento do proximo pregao maior que o fechamento atual.
 - `0`: fechamento do proximo pregao menor ou igual ao fechamento atual.
@@ -17,29 +17,45 @@ O problema sera tratado como uma classificacao binaria:
 
 A base utilizada contem dados historicos diarios do IBOVESPA obtidos no Investing.com.
 
-- Periodo disponivel: 02/01/2023 a 31/07/2025
-- Quantidade de registros: 644 pregoes
-- Arquivo original no projeto: `data/raw/dados_historicos_ibovespa.csv`
+- Periodo original: 02/01/2023 a 31/07/2025
+- Quantidade original: 644 pregoes
+- Arquivo bruto: `data/raw/dados_historicos_ibovespa.csv`
+- Base de modelagem apos janelas tecnicas: 594 registros
 
-## Estrategia
+## Metodologia
 
-O desenvolvimento sera organizado em etapas:
+O desenvolvimento seguiu as etapas abaixo:
 
-1. Carregamento e limpeza dos dados.
-2. Analise exploratoria.
-3. Criacao da variavel alvo.
-4. Engenharia de atributos com informacoes disponiveis ate o dia da previsao.
-5. Separacao temporal entre treino e teste, mantendo os ultimos 30 pregoes como teste final.
-6. Comparacao entre baseline e modelos de classificacao.
-7. Analise das metricas e interpretacao gerencial dos resultados.
+1. Carregamento e limpeza dos dados no formato brasileiro.
+2. Ordenacao cronologica dos pregoes.
+3. Criacao da variavel alvo `alta_amanha`.
+4. Engenharia de atributos usando apenas informacoes disponiveis ate o dia da previsao.
+5. Separacao temporal entre treino e teste.
+6. Comparacao entre baselines e modelos de classificacao.
+7. Avaliacao final no periodo de teste.
 
-## Resultado atual
+O conjunto de teste foi composto pelos ultimos 30 pregoes disponiveis na base de modelagem, evitando embaralhamento aleatorio e respeitando a natureza temporal do problema.
 
-O melhor modelo testado ate o momento foi um SVC com janela recente de 150 pregoes para treino.
+## Features
 
-- Teste: ultimos 30 pregoes disponiveis na base
+Foram utilizadas features derivadas do proprio IBOVESPA:
+
+- retornos acumulados e defasados;
+- medias moveis e distancia em relacao as medias;
+- volatilidade recente;
+- amplitude intradiaria e corpo do candle;
+- posicao do fechamento em janelas recentes;
+- volume transformado;
+- indicadores tecnicos simples, como RSI, MACD e Bollinger;
+- variaveis de calendario.
+
+## Resultado
+
+O melhor modelo foi um SVC treinado com uma janela recente de 150 pregoes.
+
+- Teste: ultimos 30 pregoes disponiveis
 - Periodo de teste: 18/06/2025 a 30/07/2025
-- Acuracia: 76,67%
+- Acuracia final: 76,67%
 - Matriz de confusao: `[[16, 2], [5, 7]]`
 
 Esse resultado supera a meta minima de 75% definida no enunciado.
@@ -48,28 +64,28 @@ Esse resultado supera a meta minima de 75% definida no enunciado.
 
 ```text
 .
-├── data/
-│   ├── raw/
-│   └── processed/
-├── docs/
-├── notebooks/
-├── reports/
-│   ├── apresentacao/
-│   └── figures/
-├── src/
-├── README.md
-└── requirements.txt
+|-- data/
+|   |-- raw/
+|   `-- processed/
+|-- docs/
+|-- notebooks/
+|-- reports/
+|   |-- apresentacao/
+|   `-- figures/
+|-- src/
+|-- README.md
+`-- requirements.txt
 ```
 
 ## Como executar
 
-O notebook principal esta em:
+Notebook principal:
 
 `notebooks/tech_challenge_fase_2_ibovespa.ipynb`
 
-Ele foi preparado para execucao no Google Colab e tambem em ambiente local.
+No Google Colab, abra o link abaixo e execute as celulas em sequencia:
 
-As dependencias principais estao em `requirements.txt`.
+https://colab.research.google.com/github/renancotrin-alt/tech-challenge-fase-2-ibovespa/blob/V1_Ibovespa/notebooks/tech_challenge_fase_2_ibovespa.ipynb
 
 Em ambiente local:
 
@@ -79,8 +95,6 @@ python -m src.data_prep
 python -m src.modeling
 ```
 
-No Google Colab, abra o notebook a partir do GitHub publico. A primeira celula clona o repositorio e ajusta o diretorio de trabalho automaticamente.
+## Observacao
 
-Link direto:
-
-https://colab.research.google.com/github/renancotrin-alt/tech-challenge-fase-2-ibovespa/blob/V1_Ibovespa/notebooks/tech_challenge_fase_2_ibovespa.ipynb
+O modelo deve ser interpretado como apoio analitico para leitura de tendencia, nao como recomendacao automatica de compra ou venda. Mercados financeiros sao sensiveis a eventos externos e exigem revisao periodica.
