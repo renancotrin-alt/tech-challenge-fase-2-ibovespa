@@ -2,6 +2,8 @@
 
 Projeto desenvolvido para a Pos-Tech FIAP - Data Analytics.
 
+[Abrir notebook no Google Colab](https://colab.research.google.com/github/renancotrin-alt/tech-challenge-fase-2-ibovespa/blob/V1_Ibovespa/notebooks/tech_challenge_fase_2_ibovespa.ipynb)
+
 ## Objetivo
 
 Construir um modelo preditivo para estimar se o fechamento do IBOVESPA no proximo pregao sera maior ou menor que o fechamento do pregao atual.
@@ -78,3 +80,7 @@ python -m src.modeling
 ```
 
 No Google Colab, abra o notebook a partir do GitHub publico. A primeira celula clona o repositorio e ajusta o diretorio de trabalho automaticamente.
+
+Link direto:
+
+https://colab.research.google.com/github/renancotrin-alt/tech-challenge-fase-2-ibovespa/blob/V1_Ibovespa/notebooks/tech_challenge_fase_2_ibovespa.ipynb
