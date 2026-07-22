@@ -83,6 +83,10 @@ Notebook principal:
 
 `notebooks/tech_challenge_fase_2_ibovespa.ipynb`
 
+Documentacao em formato Word:
+
+`reports/apresentacao/tech_challenge_fase_2_storytelling.docx`
+
 No Google Colab, abra o link abaixo e execute as celulas em sequencia:
 
 https://colab.research.google.com/github/renancotrin-alt/tech-challenge-fase-2-ibovespa/blob/V1_Ibovespa/notebooks/tech_challenge_fase_2_ibovespa.ipynb
