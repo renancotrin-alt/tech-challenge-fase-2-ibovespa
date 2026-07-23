@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from math import log
 from pathlib import Path
+import unicodedata
 
 import pandas as pd
 
@@ -28,7 +29,9 @@ def parse_percentage(value: object) -> float:
         return float("nan")
 
     text = str(value).strip().replace("%", "")
-    return parse_brazilian_number(text) / 100
+    if "," in text:
+        return parse_brazilian_number(text) / 100
+    return float(text) / 100
 
 
 def parse_volume(value: object) -> float:
@@ -71,16 +74,22 @@ def load_raw_data(path: Path = RAW_DATA_PATH) -> pd.DataFrame:
     return pd.read_csv(path, encoding="utf-8-sig", dtype=str)
 
 
+def normalize_column_name(column: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(column))
+    return normalized.encode("ascii", "ignore").decode("ascii").strip()
+
+
 def clean_ibovespa_data(df: pd.DataFrame) -> pd.DataFrame:
     cleaned = df.copy()
+    cleaned.columns = [normalize_column_name(column) for column in cleaned.columns]
 
     cleaned = cleaned.rename(
         columns={
             "Data": "data",
-            "Último": "fechamento",
+            "Ultimo": "fechamento",
             "Abertura": "abertura",
-            "Máxima": "maxima",
-            "Mínima": "minima",
+            "Maxima": "maxima",
+            "Minima": "minima",
             "Vol.": "volume",
             "Var%": "variacao_pct",
         }

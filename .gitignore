@@ -7,6 +7,10 @@ __pycache__/
 .venv/
 venv/
 env/
+.jupyter_config/
+.jupyter_data/
+.jupyter_runtime/
+.ipython/
 
 # Local files
 .env
@@ -19,5 +23,7 @@ Thumbs.db
 # Generated outputs
 data/processed/*
 reports/figures/*
+reports/apresentacao/render_check/
+.lo_profile*/
 !data/processed/.gitkeep
 !reports/figures/.gitkeep
