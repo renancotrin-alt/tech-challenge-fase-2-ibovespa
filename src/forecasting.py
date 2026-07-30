@@ -11,6 +11,7 @@ from src.data_prep import clean_ibovespa_data, load_raw_data
 
 
 REGRESSION_TARGET = "fechamento_amanha"
+TARGET_DATE_COLUMN = "data_alvo"
 
 
 @dataclass
@@ -50,6 +51,7 @@ def build_regression_dataset() -> pd.DataFrame:
     cleaned = clean_ibovespa_data(load_raw_data())
     dataset = cleaned.copy()
     dataset[REGRESSION_TARGET] = dataset["fechamento"].shift(-1)
+    dataset[TARGET_DATE_COLUMN] = dataset["data"].shift(-1)
     dataset["direcao_amanha"] = (
         dataset[REGRESSION_TARGET] > dataset["fechamento"]
     ).astype(int)
@@ -82,18 +84,20 @@ def evaluate_predictions(
 
 
 def arima_static_forecast(train: pd.DataFrame, steps: int) -> np.ndarray:
-    series = train.set_index("data")["fechamento"]
+    series = train["fechamento"].to_numpy()
     model = ARIMA(series, order=(5, 1, 0)).fit()
-    return np.asarray(model.forecast(steps=steps).values, dtype=float)
+    return np.asarray(model.forecast(steps=steps), dtype=float)
 
 
 def arima_walk_forward_forecast(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
     history = list(train["fechamento"].values)
     predictions = []
     for actual_close in test["fechamento"].values:
+        # Ao final do pregao D, seu fechamento ja e conhecido e deve entrar
+        # no historico antes de gerar a previsao para D+1.
+        history.append(actual_close)
         model = ARIMA(history, order=(5, 1, 0)).fit()
         predictions.append(float(model.forecast(steps=1)[0]))
-        history.append(actual_close)
     return np.asarray(predictions, dtype=float)
 
 
@@ -103,7 +107,10 @@ def run_regression_experiments(test_size: int = 125) -> list[ForecastResult]:
     y_true = test[REGRESSION_TARGET]
 
     naive_pred = test["fechamento"].values
-    static_pred = arima_static_forecast(train, steps=len(test))
+    # O horizonte do teste comeca no alvo da primeira linha de teste. Logo,
+    # o fechamento corrente dessa linha pertence ao historico disponivel.
+    static_history = pd.concat([train, test.iloc[[0]]], ignore_index=True)
+    static_pred = arima_static_forecast(static_history, steps=len(test))
     walk_forward_pred = arima_walk_forward_forecast(train, test)
 
     results = [

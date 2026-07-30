@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from docx import Document
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_TAB_LEADER
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
@@ -202,6 +202,21 @@ def add_numbered_item(doc: Document, text: str) -> None:
     style_run(run)
 
 
+def add_toc_entry(doc: Document, label: str, page: int, *, level: int = 0) -> None:
+    paragraph = doc.add_paragraph()
+    paragraph.paragraph_format.left_indent = Inches(0.25 * level)
+    paragraph.paragraph_format.space_after = Pt(4)
+    paragraph.paragraph_format.tab_stops.add_tab_stop(
+        Inches(6.2),
+        WD_TAB_ALIGNMENT.RIGHT,
+        WD_TAB_LEADER.DOTS,
+    )
+    run = paragraph.add_run(label)
+    style_run(run, bold=level == 0, size=10)
+    run = paragraph.add_run(f"\t{page}")
+    style_run(run, bold=level == 0, size=10)
+
+
 def add_callout(doc: Document, title: str, body: str, color: str = DARK_BLUE) -> None:
     table = doc.add_table(rows=1, cols=1)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -292,6 +307,10 @@ def fmt_int(value: float) -> str:
     return f"{value:,.0f}".replace(",", ".")
 
 
+def fmt_date(value) -> str:
+    return pd.Timestamp(value).strftime("%d/%m/%Y")
+
+
 def get_notebook() -> dict:
     return json.loads(NOTEBOOK_PATH.read_text(encoding="utf-8"))
 
@@ -362,7 +381,7 @@ def create_diagnostic_figures(
 
     error_time_path = FIGURES_DIR / "09_erro_no_tempo_arima.png"
     fig, ax = plt.subplots(figsize=(12, 5))
-    ax.plot(test["data"], error_pct * 100, color="#2E74B5", linewidth=1.8)
+    ax.plot(test["data_alvo"], error_pct * 100, color="#2E74B5", linewidth=1.8)
     ax.axhline(2.15, color="#7A5A00", linestyle="--", linewidth=2)
     ax.set_title("Erro percentual ao longo do teste - ARIMA walk-forward")
     ax.set_xlabel("")
@@ -446,6 +465,7 @@ def build_document() -> Path:
     model_df = build_modeling_dataset()
     train, test = temporal_split(regression_df, test_size=125)
     results = run_regression_experiments(test_size=125)
+    walk_result = next(item for item in results if "walk-forward" in item.name)
     feature_results = run_feature_regression_experiments(model_df)
     adf = adf_summary()
     forecast = forecast_next_15_business_days()
@@ -501,6 +521,31 @@ def build_document() -> Path:
     )
     doc.add_page_break()
 
+    add_heading(doc, "Sumario")
+    for label, page, level in [
+        ("1. Escopo analitico e criterio de sucesso", 3, 0),
+        ("1.1 Aderencia ao enunciado", 3, 1),
+        ("1.2 Como a entrega esta organizada", 4, 1),
+        ("2. Preparacao da base historica", 5, 0),
+        ("3. Leitura historica do IBOVESPA", 6, 0),
+        ("3.1 Ciclos economicos observados", 6, 1),
+        ("3.2 Retornos, choques e faixa de tolerancia", 7, 1),
+        ("4. Diagnostico estatistico da serie", 8, 0),
+        ("4.1 Decomposicao da serie", 8, 1),
+        ("4.2 Estacionariedade pelo teste ADF", 9, 1),
+        ("4.3 Memoria curta pela ACF e PACF", 9, 1),
+        ("5. Construcao de alvos e atributos", 10, 0),
+        ("6. Validacao fora da amostra", 11, 0),
+        ("7. Experimentos e escolha do modelo", 12, 0),
+        ("7.4 Resultado comparativo", 13, 1),
+        ("7.6 Robustez da tolerancia de erro", 16, 1),
+        ("8. Investigacao complementar de direcao", 18, 0),
+        ("9. Projecao dos proximos 15 pregoes", 19, 0),
+        ("10. Fechamento tecnico", 21, 0),
+    ]:
+        add_toc_entry(doc, label, page, level=level)
+    doc.add_page_break()
+
     add_heading(doc, "1. Escopo analitico e criterio de sucesso")
     add_paragraph(
         doc,
@@ -530,10 +575,18 @@ def build_document() -> Path:
         ["Exigencia da prova", "Como foi atendida"],
         [
             ["Modelo de serie temporal", "ARIMA(5,1,0) com validacao walk-forward e comparacao contra baseline."],
-            ["Assertividade minima de 80%", "98,67% por 1 - WMAPE e 82,40% dentro da faixa de 2,15%."],
+            [
+                "Assertividade minima de 80%",
+                f"{fmt_pct(walk_result.assertiveness)} por 1 - WMAPE e "
+                f"{fmt_pct(walk_result.hit_rate_0215)} dentro da faixa de 2,15%.",
+            ],
             ["Storytelling dos picos", "Linha do tempo economica e leitura dos choques de volatilidade."],
             ["Explicacao e vantagens do modelo", "ADF, ACF/PACF, vantagens do ARIMA e comparacao com modelos alternativos."],
-            ["Previsao de 15 dias", "Tabela e grafico de 23/07/2026 a 12/08/2026 com intervalo de confianca."],
+            [
+                "Previsao de 15 dias",
+                f"Tabela e grafico de {fmt_date(forecast['data'].min())} a "
+                f"{fmt_date(forecast['data'].max())} com intervalo de confianca.",
+            ],
         ],
         [2.3, 4.2],
         spacing_after=False,
@@ -738,14 +791,18 @@ featured["volatilidade_21d"] = featured["retorno_1d"].rolling(21).std()
     add_heading(doc, "6. Validacao fora da amostra")
     add_paragraph(
         doc,
-        "Para evitar vazamento de informacao futura, a divisao entre treino e teste foi feita de forma temporal. A ultima observacao da base limpa, 22/07/2026, e usada como fechamento conhecido; como o alvo e o proximo pregao, o ultimo alvo conhecido fica em 21/07/2026.",
+        "Para evitar vazamento de informacao futura, a divisao entre treino e teste foi feita de forma temporal. "
+        f"A linha preditora de {fmt_date(test.iloc[-1]['data'])} usa somente informacoes conhecidas ate essa data "
+        f"e tem como alvo o fechamento de {fmt_date(test.iloc[-1]['data_alvo'])}. Assim, o teste cobre "
+        f"{fmt_int(len(test))} datas-alvo, de {fmt_date(test['data_alvo'].min())} a "
+        f"{fmt_date(test['data_alvo'].max())}.",
     )
     add_table(
         doc,
-        ["Conjunto", "Registros", "Periodo"],
+        ["Conjunto", "Registros", "Datas-alvo"],
         [
-            ["Treino", fmt_int(len(train)), f"{train['data'].min().date()} a {train['data'].max().date()}"],
-            ["Teste", fmt_int(len(test)), f"{test['data'].min().date()} a {test['data'].max().date()}"],
+            ["Treino", fmt_int(len(train)), f"{train['data_alvo'].min().date()} a {train['data_alvo'].max().date()}"],
+            ["Teste", fmt_int(len(test)), f"{test['data_alvo'].min().date()} a {test['data_alvo'].max().date()}"],
         ],
         [1.4, 1.3, 3.8],
     )
@@ -847,9 +904,9 @@ naive_result = evaluate_predictions(
 history = list(train["fechamento"].values)
 predictions = []
 for actual_close in test["fechamento"].values:
+    history.append(actual_close)
     model = ARIMA(history, order=(5, 1, 0)).fit()
     predictions.append(float(model.forecast(steps=1)[0]))
-    history.append(actual_close)
 """,
     )
 
@@ -879,7 +936,10 @@ for actual_close in test["fechamento"].values:
     add_callout(
         doc,
         "Modelo escolhido",
-        "O ARIMA(5,1,0) walk-forward foi escolhido para a narrativa principal por respeitar a estrutura temporal e atingir 98,67% de assertividade por 1 - WMAPE, alem de 82,40% de acerto dentro da faixa de 2,15%.",
+        "O ARIMA(5,1,0) walk-forward foi escolhido para a narrativa principal "
+        "por respeitar a estrutura temporal e atingir "
+        f"{fmt_pct(walk_result.assertiveness)} de assertividade por 1 - WMAPE, "
+        f"alem de {fmt_pct(walk_result.hit_rate_0215)} de acerto dentro da faixa de 2,15%.",
         color=GREEN,
     )
     add_heading(doc, "7.5 Regressao com atributos tecnicos", level=2)
@@ -979,7 +1039,9 @@ rf_reg.fit(x_train, y_train)
     add_heading(doc, "9. Projecao dos proximos 15 pregoes")
     add_paragraph(
         doc,
-        "Com a base atualizada ate 22/07/2026, a previsao inicia em 23/07/2026 e termina em 12/08/2026. O intervalo de confianca aumenta ao longo do horizonte, refletindo a incerteza acumulada.",
+        f"Com a base atualizada ate {fmt_date(dados['data'].max())}, a previsao inicia em "
+        f"{fmt_date(forecast['data'].min())} e termina em {fmt_date(forecast['data'].max())}. "
+        "O intervalo de confianca aumenta ao longo do horizonte, refletindo a incerteza acumulada.",
     )
     forecast_rows = []
     for _, row in forecast.iterrows():
@@ -1009,7 +1071,7 @@ rf_reg.fit(x_train, y_train)
     )
     add_heading(doc, "10.1 Principais entregas", level=2)
     for item in [
-        "Uma base historica atualizada e limpa do IBOVESPA ate 22/07/2026.",
+        f"Uma base historica atualizada e limpa do IBOVESPA ate {fmt_date(dados['data'].max())}.",
         "Storytelling conectando ciclos do indice a eventos economicos relevantes.",
         "Decomposicao, teste ADF e leitura de autocorrelacao para justificar a abordagem temporal.",
         "Comparacao entre baseline, ARIMA estatico e ARIMA walk-forward.",

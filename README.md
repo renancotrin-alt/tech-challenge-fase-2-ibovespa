@@ -20,8 +20,8 @@ O WMAPE mede o erro percentual ponderado. Portanto, quanto menor o WMAPE, maior 
 
 A base utilizada contem dados historicos diarios do IBOVESPA obtidos no Investing.com.
 
-- Periodo bruto: 04/01/2010 a 22/07/2026
-- Quantidade bruta: 4.105 pregoes
+- Periodo bruto: 04/01/2010 a 29/07/2026
+- Quantidade bruta: 4.110 pregoes
 - Arquivo bruto: `data/raw/dados_historicos_ibovespa.csv`
 - Fonte: Investing.com - dados historicos do indice Bovespa
 
@@ -41,7 +41,7 @@ O desenvolvimento seguiu as etapas abaixo:
 8. Teste complementar de modelos com features tecnicas.
 9. Previsao dos proximos 15 pregoes.
 
-O conjunto de teste principal foi composto pelos ultimos 125 pregoes disponiveis com alvo conhecido, cobrindo 20/01/2026 a 21/07/2026.
+O conjunto de teste principal foi composto pelos ultimos 125 pregoes disponiveis com alvo conhecido, cobrindo as datas-alvo de 28/01/2026 a 29/07/2026.
 
 ## Resultado Principal
 
@@ -49,9 +49,9 @@ O modelo escolhido para a narrativa final foi o ARIMA(5,1,0) em avaliacao walk-f
 
 | Modelo | WMAPE | Assertividade | MAE | Acerto ate 2,15% |
 | --- | ---: | ---: | ---: | ---: |
-| Naive - persistencia | 0,95% | 99,05% | 1.722 pontos | 91,20% |
-| ARIMA(5,1,0) walk-forward | 1,33% | 98,67% | 2.411 pontos | 82,40% |
-| ARIMA(5,1,0) estatico | 8,84% | 91,16% | 15.979 pontos | 2,40% |
+| Naive - persistencia | 0,93% | 99,07% | 1.678 pontos | 91,20% |
+| ARIMA(5,1,0) walk-forward | 0,93% | 99,07% | 1.681 pontos | 92,00% |
+| ARIMA(5,1,0) estatico | 3,75% | 96,25% | 6.787 pontos | 28,00% |
 
 O baseline de persistencia ficou muito forte, como e comum em series financeiras de curto prazo. Mesmo assim, o ARIMA walk-forward tambem supera a meta de 80% quando a assertividade e calculada por `1 - WMAPE` e fica acima de 80% na metrica operacional de erro dentro da faixa de 2,15%.
 
@@ -61,7 +61,7 @@ Tambem foram avaliados modelos supervisionados com features tecnicas e uma class
 
 ## Previsao dos Proximos 15 Pregoes
 
-Com a base atualizada ate 22/07/2026, a previsao de 15 pregoes inicia em 23/07/2026 e segue ate 12/08/2026. O notebook apresenta a tabela completa com fechamento previsto e intervalo de confianca de 95%.
+Com a base atualizada ate 29/07/2026, a previsao de 15 pregoes inicia em 30/07/2026 e segue ate 19/08/2026. O notebook apresenta a tabela completa com fechamento previsto e intervalo de confianca de 95%.
 
 ## Estrutura
 
